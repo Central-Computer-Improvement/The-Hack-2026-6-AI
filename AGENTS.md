@@ -136,3 +136,36 @@ Source extras (.[ extra ], defined in pyproject.toml):
 .[dev]            — Test / lint tooling
 .[all]            — Everything above
 ```
+## Implemented Microservice Features
+
+### Course Telemetry and Diagnostic Evaluation Pipeline
+
+The Course Telemetry and Diagnostic Evaluation Pipeline acts as the primary integration bridge between external Main Application Backends and DeepTutor's internal Three-Layer Memory System. It processes student learning activities, grades diagnostic quizzes, extracts distractor misconceptions, and logs structured trace events for personalization.
+
+1. System Architecture and Trace Emission:
+   - All course endpoints are stateless REST APIs located under /api/v1/courses/{course_id}/.
+   - Activity events are structured into TraceEvent objects and emitted into L1 Trace Memory (data/user/memory/trace/<surface>/<date>.jsonl).
+   - Events emit to dual surfaces (surface="chat" for Socratic Tutor context and surface="quiz" for L2/quiz.md memory consolidation).
+   - Session auto-creation ensures SQLite database sessions (course_{course_id}) are automatically initialized prior to notebook upserts.
+
+2. Video Lecture Tracking (POST /api/v1/courses/{course_id}/track_video):
+   - Receives video completion payloads containing video_id, title, kb_tags, and kb_concepts.
+   - Emits a video_watched event to L1 chat trace containing formatted Knowledge Base concepts.
+   - Persists narrative event records to local session history.
+
+3. Diagnostic Quiz Evaluation (POST /api/v1/courses/{course_id}/quiz/evaluate):
+   - Multiple Choice Questions (question_type="mcq"):
+     - Evaluates student choices deterministically against expected answers with zero LLM token cost.
+     - Maps incorrect choices to distractor misconception descriptions passed in the request payload.
+     - Emits mcq_correct or mcq_miss trace events to both chat and quiz surfaces.
+   - Short Reflection Essay Questions (question_type="essay"):
+     - Evaluates student responses against a grading rubric using the configured primary LLM model.
+     - Parses structured JSON response containing score (0.0 to 1.0), is_correct (boolean), and feedback.
+     - Emits essay_eval trace events to both chat and quiz surfaces.
+   - Notebook Persistence:
+     - Automatically saves all evaluated MCQ and Essay attempts into notebook_entries under session course_{course_id}.
+
+4. Module Capstone Completion (POST /api/v1/courses/{course_id}/modules/{module_id}/complete):
+   - Ingests module completion payloads containing learned_concepts, misconceptions, and essay_feedback.
+   - Emits a module_completed milestone summary event to L1 chat trace.
+   - Consolidates module learning milestones into the student's persistent learning history.

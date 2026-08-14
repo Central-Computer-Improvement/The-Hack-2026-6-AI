@@ -1,90 +1,81 @@
-# DeepTutor — Full-Stack Educational Platform & AI Microservice
+# DeepTutor - Full-Stack Educational Platform & AI Microservice
 
-A modern **Monorepo Architecture** combining a Main Application Backend with the **DeepTutor AI Microservice** for personalized STEM learning, diagnostic course tracking, 3-layer inspectable memory, and adaptive roadmaps.
+A monorepo combining a Main Application Backend with the DeepTutor AI Microservice for personalized STEM learning, course tracking, 3-layer inspectable memory, and adaptive roadmaps.
 
 ---
 
-## 📁 Monorepo Structure
+## Monorepo Structure
 
-\\	ext
 .
-├── backend/            # Main Application Backend (User Auth, Course CRUD DB, Student Enrolments)
-└── DeepTutor-main/     # AI Microservice (FastAPI + Socratic AI Tutor + 3-Layer Memory + Roadmaps)
-\
----
-
-## 🏛️ System Architecture
-
-\\	ext
- ┌──────────────────────┐         HTTP REST          ┌──────────────────────────────────┐
- │    Main Backend      ├───────────────────────────►│       DeepTutor Microservice     │
- │  (Port 3000 / 8000)  │  /api/v1/courses/track    │        (Port 8001 / 3782)         │
- │                      │  /api/v1/courses/evaluate │                                  │
- │  • User Auth         │  /api/v1/roadmap/generate │  • Socratic Chat & Tool Calling   │
- │  • Course DB CRUD    │  /api/v1/memory/doc       │  • Diagnostic MCQ/Essay Grading  │
- │  • Student Progress  │◄──────────────────────────┤  • 3-Layer Memory (L1, L2, L3)    │
- └──────────────────────┘       JSON Payload         └──────────────────────────────────┘
-\
----
-
-## ✨ Key Subsystems & Features
-
-- 🎓 **Course Telemetry & Misconception Evaluation**: Microservice endpoints for logging video watching events, MCQ distractor misconception grading, short essay rubric scoring, and capstone module completion.
-- 🧠 **Three-Layer Inspectable Memory System**:
-  - **L1**: Raw append-only trace log (\	race/<surface>/<date>.jsonl\).
-  - **L2**: Per-surface summary documents (\L2/chat.md\, \L2/quiz.md\, \L2/kb.md\).
-  - **L3**: Cross-surface user profile slots (\L3/profile\, \L3/recent\, \L3/scope\, \L3/preferences\).
-- 🗺️ **Adaptive STEM Roadmap Generator**: Generates 6 to 10 step personalized STEM learning timelines with instant routing into Socratic Chat.
-- ⚡ **Real-Time Socratic Chat**: Streaming WebSocket endpoint (\ws://127.0.0.1:8001/api/v1/ws\) with agentic RAG and tool calling.
+├── backend/            # Main Application Backend (User Auth, Course DB, Student Progress)
+└── DeepTutor-main/     # AI Microservice (FastAPI + Socratic AI Tutor + Memory + Roadmaps)
 
 ---
 
-## 🚀 Quick Start Guide
+## System Architecture
 
-### 1. Launching the DeepTutor AI Microservice
+Main Application Backend <---> HTTP REST / WebSockets <---> DeepTutor Microservice
 
-\\ash
+1. Main Application Backend (Port 3000 / 8000):
+   - User authentication and access control.
+   - Relational database management (Courses, Modules, Students).
+   - Serves main student dashboard and video player UI.
+
+2. DeepTutor AI Microservice (Port 8001 / 3782):
+   - Real-time Socratic Chat streaming via WebSockets.
+   - Diagnostic MCQ and short essay misconception evaluation.
+   - 3-Layer inspectable memory system (L1 trace logs, L2 surface summaries, L3 profile synthesis).
+   - Adaptive STEM learning roadmap generation.
+
+---
+
+## Key Features
+
+- Course Telemetry & Misconception Evaluation: REST endpoints for logging video watch events, diagnostic MCQ misconception grading, rubric-based essay scoring, and module completion milestones.
+- Three-Layer Memory System:
+  - L1: Raw append-only trace log (trace/surface/date.jsonl).
+  - L2: Per-surface summary documents (L2/chat.md, L2/quiz.md, L2/kb.md).
+  - L3: Cross-surface user profile slots (L3/profile, L3/recent, L3/scope, L3/preferences).
+- Adaptive STEM Roadmap Generator: Generates personalized learning timelines (6 to 10 steps) routed into Socratic Chat.
+- Real-Time Socratic Chat: Low-latency streaming WebSocket endpoint (ws://127.0.0.1:8001/api/v1/ws) with agentic tool calling.
+
+---
+
+## Quick Start Guide
+
+### 1. Launching DeepTutor AI Microservice
+
 cd DeepTutor-main
-
-# Install dependencies in editable mode
 pip install -e .
-
-# Initialize settings
 deeptutor init
-
-# Start Backend + Frontend together
 deeptutor start
-\
-### 2. Launching the Main Application Backend
 
-\\ash
+### 2. Launching Main Application Backend
+
 cd backend
+npm run dev
 
-# Start your main backend server
-npm run dev   # or python main.py
-\
 ---
 
-## 🧪 Testing & Verification
+## Automated Test Verification
 
-Run the complete 13-test verification suite inside \DeepTutor-main\:
+Run the verification test suite inside DeepTutor-main:
 
-\\ash
 cd DeepTutor-main
 python -m pytest tests/reproduce/
-\
-**Result**: **13/13 Passed 100%** (Course Tracking, L2 Memory Engine, STEM Roadmaps).
+
+Result: 13 passed out of 13 tests.
 
 ---
 
-## 📘 Subsystem Documentation
+## Documentation References
 
-- 🤖 **[DeepTutor-main/AGENTS.md](DeepTutor-main/AGENTS.md)** — Complete AI Agent manual & REST / WebSocket API reference.
-- ⚙️ **[DeepTutor-main/course_tracking.md](DeepTutor-main/course_tracking.md)** — Database schemas & REST payload specifications.
-- 🧠 **[DeepTutor-main/l2_memory.md](DeepTutor-main/l2_memory.md)** — 6-step blueprint for line-doc consolidation & memory engine.
+- DeepTutor-main/AGENTS.md: Complete AI agent architecture and REST/WebSocket API specifications.
+- DeepTutor-main/course_tracking.md: Database schemas and course payload specifications.
+- DeepTutor-main/l2_memory.md: Memory consolidation engine integration guide.
 
 ---
 
-## 📄 License
+## License
 
 Distributed under the Apache 2.0 License.
