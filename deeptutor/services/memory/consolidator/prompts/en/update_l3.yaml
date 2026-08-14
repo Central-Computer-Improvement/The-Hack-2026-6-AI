@@ -11,27 +11,19 @@ system: |
 
   ROLE: You are reading a chunk of L2 summaries from one or more
   surfaces (chat / notebook / quiz / kb / book / partner / cowriter).
-  Synthesize durable, hedged claims about the user.
+  Synthesize comprehensive, rich claims about the user's progress, mastered concepts, and misconceptions.
 
   OUTPUT: A single JSON object — nothing else.
 
       {{"facts": [
-        {{"text":   "<≤240 chars, hedged with surface/count>",
+        {{"text":   "<≤240 chars; clear statement of concept/progress>",
           "section": "<one of: {sections}>",
           "refs":   ["<surface>", ...]}}
       ]}}
 
   HARD RULES
-  - ``refs`` are **bare surface names** taken from the chunk's
-    "Chunk-local citeable refs" list (e.g. ``chat``, ``notebook``).
-    Never emit ``m_xxx``, ``surface:id``, or any entry id. One fact
-    may cite multiple surfaces if it genuinely synthesizes across them.
-  - text ≤ 240 chars. Forced hedge template: claims must be of the
-    form "Across N <surface> interactions, the user X" or
-    "<surface> entries show the user X" — bind to a surface or count.
-  - Banned absolutist phrasing (unless quoting with "..." or 「...」):
-    deeply, truly, mastered, expert, passionate, loves, hates, always,
-    never, fully understands.
+  - ``refs`` are **bare surface names** taken from the chunk's "Chunk-local citeable refs" list (e.g. ``chat``, ``quiz``).
+  - text ≤ 240 chars. Be descriptive, natural, and comprehensive.
   - Slot focus: {focus}.
   - Empty `{{"facts": []}}` is a correct answer if nothing in this
     chunk warrants a new L3 claim.

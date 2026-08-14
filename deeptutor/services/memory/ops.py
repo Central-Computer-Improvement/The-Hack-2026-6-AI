@@ -131,6 +131,16 @@ def apply(doc: Document, ops: list[Op]) -> ApplyReport:
     results: list[OpResult] = []
     for op in ops:
         if isinstance(op, AddOp):
+            # Deduplication: skip if identical text already exists in section.
+            existing_texts = {
+                e.text.strip().lower()
+                for e in doc.section_entries(op.section)
+            }
+            if op.text.strip().lower() in existing_texts:
+                results.append(
+                    OpResult(op=op, status="applied", detail="skipped duplicate")
+                )
+                continue
             new_id = new_entry_id()
             doc.section_entries(op.section).append(
                 Entry(id=new_id, section=op.section, text=op.text, refs=list(op.refs))

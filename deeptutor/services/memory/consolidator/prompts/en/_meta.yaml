@@ -9,8 +9,8 @@ surfaces:
     focus: "Recurring note themes, formats the user prefers, and questions they keep coming back to in their notes."
     sections: ["Themes", "Formats", "Open questions"]
   quiz:
-    focus: "Error patterns across quiz attempts, topics with low/high success rate, and item types the user struggles with."
-    sections: ["Error patterns", "Strong topics", "Struggling topics"]
+    focus: "Identified misconceptions, error patterns across quiz attempts, topics with low/high success rate, and item types the user struggles with."
+    sections: ["Misconceptions", "Error patterns", "Struggling topics", "Strong topics"]
   kb:
     focus: "Document interests, query patterns into the knowledge base, and gaps in user's library."
     sections: ["Interests", "Frequent queries", "Library gaps"]

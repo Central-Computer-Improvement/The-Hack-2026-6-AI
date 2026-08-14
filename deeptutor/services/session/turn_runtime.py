@@ -1372,7 +1372,7 @@ class TurnRuntimeManager:
                 leaf_message_id=branch_parent_id,
             )
             memory_store = get_memory_store()
-            memory_context = memory_store.read_l3_concat() if memory_references else ""
+            memory_context = memory_store.read_l3_concat()  # Always load L3 memory profile!
 
             # Persona: at most one behaviour preset per turn, eagerly
             # injected (a persona must shape the voice from the first
