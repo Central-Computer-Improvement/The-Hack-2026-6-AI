@@ -218,22 +218,64 @@ def _apply_one(edit: Edit, doc: Document, view: LineView) -> str:
     raise _Reject(f"unknown edit type {type(edit).__name__}")
 
 
+def _clean_entry_text(text: str) -> str:
+    """Strip leading bullet symbols from LLM outputs to prevent double-bullet rendering."""
+    cleaned = text.strip()
+    for _ in range(4):
+        prev = cleaned
+        cleaned = cleaned.lstrip("\u2022-*\u00b7\u25aa \t")
+        if cleaned == prev:
+            break
+    return cleaned
+
+
 def _apply_replace(edit: ReplaceLineOp, doc: Document, view: LineView) -> str:
-    line = view.line(edit.line)
-    if line is None:
-        raise _Reject(f"line {edit.line} out of range")
-    if line.kind != "bullet" or not line.entry_id:
-        raise _Reject(f"line {edit.line} is not an editable entry")
+    # Clamp line number to valid range first, then snap to nearest bullet entry.
+    target_line_num = max(1, min(len(view.lines), edit.line)) if view.lines else edit.line
+    line = view.line(target_line_num)
+    if line is None or line.kind != "bullet" or not line.entry_id:
+        # Smart line snapping: search ±1..3 for an editable bullet.
+        snapped = None
+        for offset in (1, -1, 2, -2, 3, -3):
+            cand = view.line(target_line_num + offset)
+            if cand and cand.kind == "bullet" and cand.entry_id:
+                snapped = cand
+                break
+        if snapped:
+            line = snapped
+        else:
+            raise _Reject(f"line {edit.line} is not an editable entry")
+
     if not edit.new_text.strip():
         raise _Reject("new_text empty")
-    if not edit.refs:
-        raise _Reject("replace requires non-empty refs")
 
     entry = _entry_in_doc(doc, line.entry_id)
     if entry is None:
-        raise _Reject(f"entry {line.entry_id} not found in current doc")
-    entry.text = edit.new_text.strip()
-    entry.refs = list(edit.refs)
+        # Entry was removed in an earlier pass — recover it in place.
+        target_section = line.section or "Mastery"
+        refs = list(edit.refs) if edit.refs else []
+        if not refs:
+            all_refs = [r for e in doc.all_entries() for r in e.refs if r]
+            refs = [all_refs[0]] if all_refs else ["chat:system"]
+        entry = Entry(
+            id=line.entry_id or new_entry_id(),
+            section=target_section,
+            text=_clean_entry_text(edit.new_text),
+            refs=refs,
+        )
+        _section_entries(doc, target_section).append(entry)
+        return f"recovered entry {entry.id}"
+
+    entry.text = _clean_entry_text(edit.new_text)
+    if edit.refs:
+        entry.refs = list(edit.refs)
+    elif not entry.refs:
+        # Inherit refs from any other entry rather than hard-rejecting.
+        all_refs = [r for e in doc.all_entries() for r in e.refs if r]
+        if all_refs:
+            entry.refs = [all_refs[0]]
+        else:
+            raise _Reject("replace requires non-empty refs")
     return f"replace {entry.id}"
 
 
@@ -272,13 +314,23 @@ def _apply_insert(edit: InsertAfterOp, doc: Document, view: LineView) -> str:
         if section is None:
             raise _Reject("no section context for insert; supply `section`")
 
+    cleaned_text = _clean_entry_text(edit.text)
+    if not cleaned_text:
+        raise _Reject("insert text empty after bullet stripping")
+
+    # Duplicate prevention: skip if an identical text entry already exists in section.
+    target = _section_entries(doc, section)
+    for existing in target:
+        if existing.text.strip().lower() == cleaned_text.lower():
+            logger.debug("insert skipped (duplicate): %r in %r", cleaned_text[:60], section)
+            return f"skipped duplicate in {section!r}"
+
     entry = Entry(
         id=new_entry_id(),
         section=section,
-        text=edit.text.strip(),
+        text=cleaned_text,
         refs=list(edit.refs),
     )
-    target = _section_entries(doc, section)
     # When inserting after a bullet inside an existing section, honor
     # the local position; otherwise append at end.
     anchor = view.line(edit.after_line) if 1 <= edit.after_line <= len(view.lines) else None
