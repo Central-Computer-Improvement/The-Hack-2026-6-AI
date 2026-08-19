@@ -43,6 +43,8 @@ class SessionStoreProtocol(Protocol):
 
     async def delete_session(self, session_id: str) -> bool: ...
 
+    async def delete_all_sessions(self) -> int: ...
+
     async def add_message(
         self,
         session_id: str,

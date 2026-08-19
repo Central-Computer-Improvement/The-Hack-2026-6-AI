@@ -32,13 +32,11 @@ import {
   normalizeCodeBlockTheme,
   normalizeCodeBlockWrapLongLines,
   normalizeLanguage,
-  resolveResponseLanguage,
   readStoredActiveSessionId,
   readStoredCodeBlockShowLineNumbers,
   readStoredCodeBlockTheme,
   readStoredCodeBlockWrapLongLines,
   readStoredLanguage,
-  writeStoredResponseLanguage,
   readStoredSidebarCollapsed,
   writeStoredActiveSessionId,
   writeStoredCodeBlockShowLineNumbers,
@@ -99,16 +97,11 @@ export function AppShellProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
-    // The saved languages live in the backend's ui settings, but only the
-    // settings route ever read them, so every other page started in English
-    // until the user changed it again in this browser. Adopt them once, and
-    // only when this browser has made no choice of its own — a local selection
-    // is the more specific signal and must win.
-    //
-    // One fetch carries both fields: the interface locale and the
-    // reader-facing output language are stored together and are gated by the
-    // same "has this browser chosen yet?" question, so splitting them into two
-    // bootstraps would only give them a chance to disagree.
+    // The saved interface language lives in the backend's ui settings, but
+    // only the settings route ever read it, so every other page started in
+    // English until the user changed it again in this browser. Adopt it once,
+    // and only when this browser has made no choice of its own — a local
+    // selection is the more specific signal and must win.
     if (hasStoredLanguage()) return;
     const controller = new AbortController();
     void (async () => {
@@ -118,23 +111,9 @@ export function AppShellProvider({ children }: { children: React.ReactNode }) {
           skipAuthRedirect: true,
         });
         if (!response.ok) return;
-        const payload = (await response.json()) as {
-          language?: unknown;
-          response_language?: unknown;
-        };
+        const payload = (await response.json()) as { language?: unknown };
         if (payload.language !== "zh" && payload.language !== "en") return;
         writeStoredLanguage(payload.language);
-        // A backend that predates the split sends no response_language;
-        // resolveResponseLanguage inherits the interface locale, matching what
-        // the server does for a legacy interface.json.
-        writeStoredResponseLanguage(
-          resolveResponseLanguage(
-            typeof payload.response_language === "string"
-              ? payload.response_language
-              : null,
-            payload.language,
-          ),
-        );
         setLanguageState(payload.language);
       } catch {
         // Offline or unauthenticated: keep the local default.

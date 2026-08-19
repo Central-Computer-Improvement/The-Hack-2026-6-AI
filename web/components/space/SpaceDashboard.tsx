@@ -39,7 +39,6 @@ type DashKey =
   | "chat_history"
   | "notebooks"
   | "question_bank"
-  | "courses"
   | "personas"
   | "skills"
   | "mcp"
@@ -106,19 +105,6 @@ const GROUPS: DashboardGroup[] = [
         unit: { zh: "道题", en: "questions" },
         tile: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
         load: async () => (await listNotebookEntries({ limit: 1 })).total,
-      },
-      {
-        key: "courses",
-        href: "/courses/cs101",
-        icon: GraduationCap,
-        title: { zh: "课程", en: "Courses" },
-        blurb: {
-          zh: "学习课程视频、进行诊断测试与随堂测验。",
-          en: "Study course lectures, diagnostic quizzes, and reflection essays.",
-        },
-        unit: { zh: "门课程", en: "courses" },
-        tile: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400",
-        load: async () => 1,
       },
     ],
   },

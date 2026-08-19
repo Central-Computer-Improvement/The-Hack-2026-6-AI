@@ -11,6 +11,7 @@ import {
   Bot,
   Brain,
   ChevronDown,
+  Compass,
   Github,
   GraduationCap,
   HeartHandshake,
@@ -51,12 +52,7 @@ const PRIMARY_NAV: NavEntry[] = [
     tooltipKey: "Home tooltip",
     requires: "llm",
   },
-  {
-    href: "/courses/cs101",
-    label: "Courses",
-    icon: GraduationCap,
-    tooltipKey: "Courses tooltip",
-  },
+  /* Hidden for backend handoff:
   {
     href: "/partners",
     label: "Partners",
@@ -88,11 +84,24 @@ const PRIMARY_NAV: NavEntry[] = [
     tooltipKey: "Book tooltip",
     requires: "llm",
   },
+  */
   {
     href: "/space",
     label: "Learning Space",
     icon: LayoutGrid,
     tooltipKey: "Space tooltip",
+  },
+  {
+    href: "/roadmap",
+    label: "Roadmap",
+    icon: Compass,
+    tooltipKey: "Roadmap tooltip",
+  },
+  {
+    href: "/courses",
+    label: "Courses",
+    icon: GraduationCap,
+    tooltipKey: "Courses tooltip",
   },
 ];
 

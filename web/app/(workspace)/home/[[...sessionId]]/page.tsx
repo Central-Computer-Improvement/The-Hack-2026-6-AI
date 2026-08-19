@@ -96,7 +96,7 @@ import {
 } from "@/lib/research-types";
 import { listKnowledgeBases } from "@/lib/knowledge-api";
 import { getSubagentSettings } from "@/lib/subagents-api";
-import { useLLMOptions } from "@/hooks/useLLMOptions";
+import { listLLMOptions, type LLMOption } from "@/lib/llm-options";
 import {
   getEnabledOptionalTools,
   invalidateEnabledOptionalToolsCache,
@@ -380,14 +380,22 @@ export default function ChatPage() {
         ? null
         : new URLSearchParams(window.location.search).get("agent");
   }
+  const pendingPromptRef = useRef<string | null | undefined>(undefined);
+  if (pendingPromptRef.current === undefined) {
+    pendingPromptRef.current =
+      typeof window === "undefined"
+        ? null
+        : new URLSearchParams(window.location.search).get("q") ||
+          new URLSearchParams(window.location.search).get("prompt");
+  }
+  const promptAutoSentRef = useRef(false);
   const agentPreselectDoneRef = useRef(false);
-  const {
-    options: llmOptions,
-    activeDefault: activeLLMDefault,
-    loading: llmOptionsLoading,
-    error: llmOptionsError,
-    refresh: refreshLLMOptions,
-  } = useLLMOptions();
+  const [llmOptions, setLLMOptions] = useState<LLMOption[]>([]);
+  const [activeLLMDefault, setActiveLLMDefault] = useState<LLMSelection | null>(
+    null,
+  );
+  const [llmOptionsLoading, setLLMOptionsLoading] = useState(true);
+  const [llmOptionsError, setLLMOptionsError] = useState(false);
   const [capabilityConfigs, setCapabilityConfigs] =
     useState<CapabilityPlaygroundConfigMap>({});
   // User-toggleable tools the user has enabled in /settings/tools. This is
@@ -1089,6 +1097,29 @@ export default function ChatPage() {
     void refreshUserEnabledTools();
   }, [refreshUserEnabledTools]);
 
+  const refreshLLMOptions = useCallback(
+    async (options?: { force?: boolean }) => {
+      setLLMOptionsLoading(true);
+      try {
+        const payload = await listLLMOptions({ force: options?.force });
+        setLLMOptions(payload.options);
+        setActiveLLMDefault(payload.active);
+        setLLMOptionsError(false);
+      } catch {
+        setLLMOptionsError(true);
+        setLLMOptions([]);
+        setActiveLLMDefault(null);
+      } finally {
+        setLLMOptionsLoading(false);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    void refreshLLMOptions();
+  }, [refreshLLMOptions]);
+
   useEffect(() => {
     if (state.llmSelection || !activeLLMDefault) return;
     setLLMSelection(activeLLMDefault);
@@ -1098,7 +1129,7 @@ export default function ChatPage() {
     if (typeof window === "undefined") return;
     const refresh = () => {
       void refreshKnowledgeBases({ force: true });
-      void refreshLLMOptions({ force: true, background: true });
+      void refreshLLMOptions({ force: true });
       // Picks up toggles the user changed in another tab (/settings/tools).
       invalidateEnabledOptionalToolsCache();
       void refreshUserEnabledTools({ force: true });
@@ -1738,6 +1769,39 @@ export default function ChatPage() {
     agentPreselectDoneRef.current = true;
     handleSelectAgent(name);
   }, [agentNameSet, handleSelectAgent]);
+
+  // Auto-send pending milestone prompt from sessionStorage or URL query parameter
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const promptFromStorage = window.sessionStorage.getItem("deeptutor.pending_milestone_prompt");
+    const promptFromUrl =
+      new URLSearchParams(window.location.search).get("q") ||
+      new URLSearchParams(window.location.search).get("prompt");
+    const promptText = promptFromStorage || promptFromUrl || pendingPromptRef.current;
+
+    if (!promptText || state.isStreaming) return;
+
+    // Clear storage and query string immediately so refresh doesn't duplicate
+    window.sessionStorage.removeItem("deeptutor.pending_milestone_prompt");
+    pendingPromptRef.current = null;
+    if (promptFromUrl) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("q");
+      url.searchParams.delete("prompt");
+      window.history.replaceState({}, "", url.pathname + (url.search ? url.search : ""));
+    }
+
+    // Prefill the composer input for visual feedback
+    if (prefillInputRef.current) {
+      prefillInputRef.current(promptText);
+    }
+
+    // Allow 300ms for WebSocket session runner to stabilize before sending
+    const timer = setTimeout(() => {
+      handleSend(promptText);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [state.isStreaming, handleSend]);
   const handleSelectNotebookPicker = useCallback(() => {
     setShowNotebookPicker(true);
   }, []);

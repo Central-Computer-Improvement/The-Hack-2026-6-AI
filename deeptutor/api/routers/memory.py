@@ -67,9 +67,10 @@ def _validate_doc_key(layer: Layer, key: str) -> None:
 
 
 def _validate_layer(layer: str) -> Layer:
-    if layer not in {"L2", "L3"}:
+    lyr = str(layer or "").upper()
+    if lyr not in {"L2", "L3"}:
         raise HTTPException(status_code=400, detail="layer must be L2 or L3")
-    return layer  # type: ignore[return-value]
+    return lyr  # type: ignore[return-value]
 
 
 def _validate_surface(surface: str) -> Surface:

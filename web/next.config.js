@@ -97,6 +97,13 @@ const nextConfig = {
   // process while it is running.
   distDir: process.env.DEEPTUTOR_NEXT_DIST_DIR || ".next",
 
+  // Force the file-tracing root to this `web` folder instead of letting
+  // Next.js infer it. Without this, a stray lockfile higher up the tree
+  // (e.g. D:\package-lock.json) makes Next.js pick the wrong workspace
+  // root, which nests the `standalone` output under a long mirrored path
+  // instead of `standalone/server.js` directly.
+  outputFileTracingRoot: __dirname,
+
   // Expose the build-time version to the browser so the sidebar badge
   // can compare it against GitHub's latest release.
   env: {

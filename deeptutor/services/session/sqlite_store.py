@@ -826,6 +826,24 @@ class SQLiteSessionStore:
     async def delete_session(self, session_id: str) -> bool:
         return await self._run(self._delete_session_sync, session_id)
 
+    def _delete_all_sessions_sync(self) -> int:
+        with self._connect() as conn:
+            try:
+                conn.execute("DELETE FROM turn_events")
+            except Exception:
+                pass
+            try:
+                conn.execute("DELETE FROM turns")
+            except Exception:
+                pass
+            conn.execute("DELETE FROM messages")
+            cur = conn.execute("DELETE FROM sessions")
+            conn.commit()
+        return cur.rowcount
+
+    async def delete_all_sessions(self) -> int:
+        return await self._run(self._delete_all_sessions_sync)
+
     def _add_message_sync(
         self,
         session_id: str,

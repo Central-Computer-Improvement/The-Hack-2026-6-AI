@@ -465,13 +465,15 @@ def read_quiz_entities() -> list[Entity]:
                 correct = (r["correct_answer"] or "").strip()
                 explanation = (r["explanation"] or "").strip()
                 is_correct = bool(int(r["is_correct"] or 0))
+                status_str = "Correct ✓" if is_correct else "Incorrect / Struggling ✗"
                 content = "\n\n".join(
                     part
                     for part in (
                         f"**Question**: {question}" if question else "",
-                        f"**User answer**: {user_answer}" if user_answer else "",
-                        f"**Correct answer**: {correct}" if correct else "",
-                        f"**Explanation**: {explanation}" if explanation else "",
+                        f"**Result Status**: {status_str}",
+                        f"**User Choice / Answer**: {user_answer}" if user_answer else "",
+                        f"**Expected Answer**: {correct}" if correct else "",
+                        f"**Identified Misconception / Feedback**: {explanation}" if explanation else "",
                     )
                     if part
                 )

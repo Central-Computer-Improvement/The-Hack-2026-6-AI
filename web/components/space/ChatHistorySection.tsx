@@ -7,6 +7,7 @@ import {
   Loader2,
   RefreshCw,
   Search,
+  Trash2,
   type LucideIcon,
 } from "lucide-react";
 import { useTranslation } from "react-i18next";
@@ -14,6 +15,7 @@ import SessionList from "@/components/SessionList";
 import SpaceSectionHeader from "@/components/space/SpaceSectionHeader";
 import { useAppShell } from "@/context/AppShellContext";
 import {
+  deleteAllSessions,
   deleteSession,
   listSessions,
   updateSessionTitle,
@@ -94,6 +96,20 @@ export default function ChatHistorySection({
     [activeSessionId, setActiveSessionId, t],
   );
 
+  const handleClearAll = useCallback(async () => {
+    if (!window.confirm(t("Are you sure you want to delete ALL chat sessions? This action cannot be undone."))) {
+      return;
+    }
+    setLoading(true);
+    try {
+      await deleteAllSessions();
+      setActiveSessionId(null);
+      setSessions([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [setActiveSessionId, t]);
+
   const HeaderIcon = icon ?? History;
   const headerTitle = title ?? t("Chat History");
   const headerDescription =
@@ -114,19 +130,30 @@ export default function ChatHistorySection({
           </span>
         }
         action={
-          <button
-            type="button"
-            onClick={() => void load(true)}
-            disabled={loading}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)]/50 px-3 py-1.5 text-[12px] font-medium text-[var(--muted-foreground)] transition-colors hover:border-[var(--border)] hover:text-[var(--foreground)] disabled:opacity-40"
-          >
-            {loading ? (
-              <Loader2 className="h-3 w-3 animate-spin" />
-            ) : (
-              <RefreshCw className="h-3 w-3" />
-            )}
-            {t("Refresh")}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => void load(true)}
+              disabled={loading}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--border)]/50 px-3 py-1.5 text-[12px] font-medium text-[var(--muted-foreground)] transition-colors hover:border-[var(--border)] hover:text-[var(--foreground)] disabled:opacity-40"
+            >
+              {loading ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3" />
+              )}
+              {t("Refresh")}
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleClearAll()}
+              disabled={loading || sessions.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-[12px] font-medium text-red-400 transition-colors hover:bg-red-500/20 hover:border-red-500/50 disabled:opacity-40"
+            >
+              <Trash2 className="h-3 w-3" />
+              {t("Clear All Chats")}
+            </button>
+          </div>
         }
       />
 

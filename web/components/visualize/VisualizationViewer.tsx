@@ -134,8 +134,7 @@ function HtmlRenderer({ html }: { html: string }) {
         );
       } else if (
         data.type === "dt:visualize-height" &&
-        typeof data.height === "number" &&
-        Number.isFinite(data.height)
+        typeof data.height === "number"
       ) {
         setHeight(Math.min(2400, Math.max(240, Math.ceil(data.height) + 8)));
       }

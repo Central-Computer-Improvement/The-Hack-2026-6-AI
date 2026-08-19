@@ -150,6 +150,19 @@ async def rename_session(session_id: str, payload: SessionRenameRequest):
     return {"session": session}
 
 
+@router.delete("/all/clear")
+async def clear_all_sessions():
+    store = get_session_store()
+    count = 0
+    if hasattr(store, "delete_all_sessions"):
+        count = await store.delete_all_sessions()
+    try:
+        await get_attachment_store().delete_all()
+    except Exception:
+        pass
+    return {"deleted": True, "count": count}
+
+
 @router.delete("/{session_id}")
 async def delete_session(session_id: str):
     store = get_session_store()

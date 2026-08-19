@@ -219,22 +219,20 @@ def _apply_one(edit: Edit, doc: Document, view: LineView) -> str:
 
 
 def _clean_entry_text(text: str) -> str:
-    """Strip leading bullet symbols from LLM outputs to prevent double-bullet rendering."""
     cleaned = text.strip()
     for _ in range(4):
         prev = cleaned
-        cleaned = cleaned.lstrip("\u2022-*\u00b7\u25aa \t")
+        cleaned = cleaned.lstrip("•-*·▪ \t")
         if cleaned == prev:
             break
     return cleaned
 
 
 def _apply_replace(edit: ReplaceLineOp, doc: Document, view: LineView) -> str:
-    # Clamp line number to valid range first, then snap to nearest bullet entry.
     target_line_num = max(1, min(len(view.lines), edit.line)) if view.lines else edit.line
     line = view.line(target_line_num)
     if line is None or line.kind != "bullet" or not line.entry_id:
-        # Smart line snapping: search ±1..3 for an editable bullet.
+        # Snap to nearest bullet line within radius 3
         snapped = None
         for offset in (1, -1, 2, -2, 3, -3):
             cand = view.line(target_line_num + offset)
@@ -251,7 +249,6 @@ def _apply_replace(edit: ReplaceLineOp, doc: Document, view: LineView) -> str:
 
     entry = _entry_in_doc(doc, line.entry_id)
     if entry is None:
-        # Entry was removed in an earlier pass — recover it in place.
         target_section = line.section or "Mastery"
         refs = list(edit.refs) if edit.refs else []
         if not refs:
@@ -270,7 +267,7 @@ def _apply_replace(edit: ReplaceLineOp, doc: Document, view: LineView) -> str:
     if edit.refs:
         entry.refs = list(edit.refs)
     elif not entry.refs:
-        # Inherit refs from any other entry rather than hard-rejecting.
+        # If entry has no refs and edit has none, try finding any ref in doc
         all_refs = [r for e in doc.all_entries() for r in e.refs if r]
         if all_refs:
             entry.refs = [all_refs[0]]
@@ -280,14 +277,23 @@ def _apply_replace(edit: ReplaceLineOp, doc: Document, view: LineView) -> str:
 
 
 def _apply_delete(edit: DeleteLinesOp, doc: Document, view: LineView) -> str:
-    if edit.line_end < edit.line_start:
+    start = max(1, min(len(view.lines), edit.line_start)) if view.lines else edit.line_start
+    end = max(start, min(len(view.lines), edit.line_end)) if view.lines else edit.line_end
+    if end < start:
         raise _Reject(f"line_end {edit.line_end} < line_start {edit.line_start}")
     ids_to_drop: set[str] = set()
-    for n in range(edit.line_start, edit.line_end + 1):
+    for n in range(start, end + 1):
         line = view.line(n)
         if line is None or line.kind != "bullet" or not line.entry_id:
-            continue  # section/blank lines are removed only as a side-effect of empties
+            continue
         ids_to_drop.add(line.entry_id)
+    if not ids_to_drop:
+        # Snap to nearest bullet
+        for offset in (0, 1, -1, 2, -2):
+            cand = view.line(start + offset)
+            if cand and cand.kind == "bullet" and cand.entry_id:
+                ids_to_drop.add(cand.entry_id)
+                break
     if not ids_to_drop:
         raise _Reject("range covers no entries")
     for _name, entries in doc.sections:
@@ -298,38 +304,38 @@ def _apply_delete(edit: DeleteLinesOp, doc: Document, view: LineView) -> str:
 def _apply_insert(edit: InsertAfterOp, doc: Document, view: LineView) -> str:
     if not edit.text.strip():
         raise _Reject("insert text empty")
-    if not edit.refs:
-        raise _Reject("insert requires non-empty refs")
+
+    refs = list(edit.refs) if edit.refs else []
+    if not refs:
+        # Fallback refs if LLM omitted refs: inherit from doc
+        all_refs = [r for e in doc.all_entries() for r in e.refs if r]
+        if all_refs:
+            refs = [all_refs[0]]
+        else:
+            raise _Reject("insert requires non-empty refs")
 
     section = edit.section
     if section is None:
-        if edit.after_line < 1 or edit.after_line > len(view.lines):
-            raise _Reject(
-                "after_line out of range; for top-of-doc insert provide `section` explicitly"
-            )
-        anchor = view.line(edit.after_line)
+        clamped_after = max(1, min(len(view.lines), edit.after_line)) if view.lines else 0
+        anchor = view.line(clamped_after) if clamped_after > 0 else None
         section = anchor.section if anchor and anchor.section else None
         if section is None and anchor and anchor.kind == "section":
             section = anchor.text.lstrip("# ").strip()
+        if section is None and doc.sections:
+            section = doc.sections[0][0]
         if section is None:
-            raise _Reject("no section context for insert; supply `section`")
+            section = "Mastery"
 
-    cleaned_text = _clean_entry_text(edit.text)
-    if not cleaned_text:
-        raise _Reject("insert text empty after bullet stripping")
-
-    # Duplicate prevention: skip if an identical text entry already exists in section.
+    clean_text = _clean_entry_text(edit.text)
     target = _section_entries(doc, section)
-    for existing in target:
-        if existing.text.strip().lower() == cleaned_text.lower():
-            logger.debug("insert skipped (duplicate): %r in %r", cleaned_text[:60], section)
-            return f"skipped duplicate in {section!r}"
+    if any(e.text.strip().lower() == clean_text.strip().lower() for e in target):
+        return f"skipped duplicate entry in {section}"
 
     entry = Entry(
         id=new_entry_id(),
         section=section,
-        text=cleaned_text,
-        refs=list(edit.refs),
+        text=clean_text,
+        refs=refs,
     )
     # When inserting after a bullet inside an existing section, honor
     # the local position; otherwise append at end.

@@ -1487,12 +1487,17 @@ class QuestionPipeline:
         )
 
     def _resolved_tools(self, context: UnifiedContext) -> list[str]:
-        return compose_enabled_tools(
+        tools = compose_enabled_tools(
             registry=self.registry,
             requested_tools=self.enabled_tools,
             optional_whitelist=self._optional_tools,
             mount_flags=self._mount_flags(context),
         )
+        if self.kb_name or (context and context.knowledge_bases):
+            # When a Knowledge Base is attached, exclude web_search so the model
+            # generates quizzes strictly from the KB without web delays.
+            tools = [t for t in tools if t != "web_search"]
+        return tools
 
     def _use_native_tools(self, context: UnifiedContext) -> bool:
         """Native tool calling is only worth enabling when (a) the binding /

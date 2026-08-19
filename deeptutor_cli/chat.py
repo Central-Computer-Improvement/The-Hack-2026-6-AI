@@ -9,7 +9,6 @@ import shlex
 from typing import Any
 
 from rich.panel import Panel
-from rich.text import Text
 import typer
 
 from deeptutor.app import DeepTutorApp, TurnRequest
@@ -285,7 +284,8 @@ def _read_repl_input() -> str:
 
 
 def _print_state(state: ChatState) -> None:
-    _print_literal(
+    console.print(
+        "[dim]"
         f"session={state.session_id or '(new)'} "
         f"capability={state.capability} "
         f"tools={_format_list(state.tools)} "
@@ -293,31 +293,22 @@ def _print_state(state: ChatState) -> None:
         f"history={_format_list(state.history_references)} "
         f"notebook_refs={_format_notebook_refs(state.notebook_references)} "
         f"language={state.language} "
-        f"config={_format_config(state.config)}",
-        style="dim",
+        f"config={_format_config(state.config)}"
+        "[/]",
+        highlight=False,
     )
 
 
 def _print_refs(state: ChatState) -> None:
-    _print_literal("Current state:", style="bold")
-    fields = (
-        ("session", state.session_id or "(new)"),
-        ("capability", state.capability),
-        ("tools", _format_list(state.tools)),
-        ("kb", _format_list(state.knowledge_bases)),
-        ("history", _format_list(state.history_references)),
-        ("notebooks", _format_notebook_refs(state.notebook_references)),
-        ("language", state.language),
-        ("config", _format_config(state.config)),
-    )
-    for label, value in fields:
-        _print_literal(f"  {label:<12}{value}")
-
-
-def _print_literal(value: str, *, style: str = "") -> None:
-    """Print dynamic CLI text without interpreting it as Rich markup."""
-
-    console.print(Text(value, style=style), highlight=False)
+    console.print("[bold]Current state:[/]")
+    console.print(f"  session     {state.session_id or '(new)'}")
+    console.print(f"  capability  {state.capability}")
+    console.print(f"  tools       {_format_list(state.tools)}")
+    console.print(f"  kb          {_format_list(state.knowledge_bases)}")
+    console.print(f"  history     {_format_list(state.history_references)}")
+    console.print(f"  notebooks   {_format_notebook_refs(state.notebook_references)}")
+    console.print(f"  language    {state.language}")
+    console.print(f"  config      {_format_config(state.config)}")
 
 
 def _format_list(items: list[str]) -> str:

@@ -22,11 +22,13 @@ system: |
       ]}}
 
   HARD RULES
-  - ``refs`` are **bare surface names** taken from the chunk's "Chunk-local citeable refs" list (e.g. ``chat``, ``quiz``).
-  - text ≤ 240 chars. Be descriptive, natural, and comprehensive.
+  - ``refs`` are **bare surface names** taken from the chunk's
+    "Chunk-local citeable refs" list (e.g. ``chat``, ``notebook``).
+    Never emit ``m_xxx``, ``surface:id``, or any entry id. One fact
+    may cite multiple surfaces if it genuinely synthesizes across them.
+  - text ≤ 240 chars. Be descriptive, natural, and comprehensive (e.g. "Completed CS101 Video 1.1 on Cost Functions", "Mastered Mean Squared Error concept", "Stuck on finding derivatives").
+  - Capture ALL distinct topics, mastered knowledge concepts, and misconceptions from the L2 entries.
   - Slot focus: {focus}.
-  - Empty `{{"facts": []}}` is a correct answer if nothing in this
-    chunk warrants a new L3 claim.
 
   Today is {today}.
 

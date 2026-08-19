@@ -189,6 +189,15 @@ export async function deleteSession(sessionId: string): Promise<void> {
   invalidateClientCache("sessions:");
 }
 
+export async function deleteAllSessions(): Promise<number> {
+  const response = await apiFetch(apiUrl("/api/v1/sessions/all/clear"), {
+    method: "DELETE",
+  });
+  const data = await expectJson<{ deleted: boolean; count: number }>(response);
+  invalidateClientCache("sessions:");
+  return data.count;
+}
+
 export async function recordQuizResults(
   sessionId: string,
   answers: QuizResultItem[],

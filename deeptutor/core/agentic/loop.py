@@ -375,11 +375,14 @@ async def run_agentic_loop(
 def _protocol_violation(
     step: LabeledStepResult,
     protocol: LabelProtocol,
+    implicit_think_label: bool = False,
 ) -> str | None:
     """Classify a labeled-step result against the protocol; return a
     violation key (matching the host's repair-message vocabulary) or
     ``None`` if compliant."""
     if step.label == LABEL_UNKNOWN:
+        if implicit_think_label:
+            return None
         return "missing_label"
     if find_inline_labels(step.text, allowed_labels=protocol.allowed):
         return "multiple_labels"
